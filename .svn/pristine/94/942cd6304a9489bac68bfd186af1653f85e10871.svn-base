@@ -1,0 +1,20 @@
+//
+//  WY4PrefixHeader.pch
+//  WY4iPhone
+//
+//  Created by liang.pc on 15/9/10.
+//  Copyright (c) 2015年 mx. All rights reserved.
+//
+
+#ifndef WY4iPhone_WY4PrefixHeader_pch
+#define WY4iPhone_WY4PrefixHeader_pch
+
+#import "AppImport.h"
+#import "UIColor+Fruitday.h"
+#import "MobClick.h"
+#import "NSString+Addition.h"
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+
+#endif

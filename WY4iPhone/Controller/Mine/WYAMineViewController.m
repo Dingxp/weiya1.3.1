@@ -1,0 +1,689 @@
+//
+//  WYAMineViewController.m
+//  WY4iPhone
+//
+//  Created by mx on 15/8/31.
+//  Copyright (c) 2015年 mx. All rights reserved.
+//
+
+#import "WYAMineViewController.h"
+#import "RegistViewController.h"
+#import "SettingTableViewController.h"
+#import "ZMToBePaidViewController.h"
+#import "ZMOrderViewController.h"
+#import "ZMUser.h"
+#import "UIImageView+WebCache.h"
+#import "ZMShipedOrderViewController.h"
+#import "ZMRetOrderListViewController.h"
+#import "ZMAddressViewController.h"
+#import "MineCenterTableViewCell.h"
+#import "ZMUserInfoViewController.h"
+#import "ZMcollectShopViewController.h"
+#import "UMSocial.h"
+#import "MineInfoViewController.h"
+#import "UMFeedback.h"
+#import "CouponItemListViewController.h"
+#import "ZMChannelItem.h"
+#define kLoginUrl       @"app/crm/reguser/login.do"
+
+@interface WYAMineViewController () <MineCenterCellDelegate>{
+    UIImageView *head;
+    // 用户昵称
+    UILabel *nameLabel;
+    // 客服电话
+    NSString *servicePhoneNum;
+    // 会员和微商信息
+    NSDictionary *resultUserAndWSxxDic;
+    // 专属码
+    UILabel *labelInvitationCode;
+    // 待支付订单计数label
+    UILabel *labelPayOrderCount;
+    //芽客身份
+    UILabel*identityLab;
+    NSString*str;
+    NSString*numberStr;
+    NSString*fenxiangMa;
+    ZMUser *user;
+    NSArray* _collectArray;
+    UIImageView*identityImage;
+    UILabel*redLab;
+}
+
+@property (nonatomic,strong) UIButton *loginButton;
+@property (nonatomic,strong) UIButton *registButton;
+
+@property (nonatomic,strong) UIView *backView;
+@property (nonatomic,strong) UIView *infoCellBack;
+
+
+
+
+@end
+
+@implementation WYAMineViewController
+
+- (void)viewDidLoad {
+    //    NSLog(@"viewDidLoad");
+    [super viewDidLoad];
+    
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.navigationController.navigationBar.translucent = NO;
+    NSString *cachePath = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc]initWithContentsOfFile:cachePath];
+    user = [ZMUser userWithDict:dict];
+    [self initNav];
+    [self initTable];
+    [self _initHeaderView];
+    [self initMineInfoCell];
+}
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [MobClick beginLogPageView:@"PageOne"];
+    NSString *cachePath = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc]initWithContentsOfFile:cachePath];
+    user = [ZMUser userWithDict:dict];
+    if (!user.userId)
+    {
+        if (labelPayOrderCount)
+        {
+            labelPayOrderCount.hidden=YES;
+            
+        }
+//        [self loadData];
+//        [self loadUserData];
+    }
+    [self login];
+    [self loadData];
+    [self loadUserData];
+    if (!user.userId)
+    {
+        if (labelPayOrderCount)
+        {
+            labelPayOrderCount.hidden=YES;
+        }
+    }
+    
+    
+}
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [MobClick endLogPageView:@"PageOne"];
+}
+- (void) loadData{
+    
+    [self requestAppPropListByType:@"1"];
+    
+    [self requestNumOfCouponByUserId:user.userId];
+    [self requestPayOrderByRegUserId:user.userId];
+}
+-(void)login
+{
+    NSMutableDictionary*dict=[NSMutableDictionary new];
+    if (!user.userId)
+    {
+        return;
+    }
+    [dict setValue:user.telNo forKey:@"telNo"];
+    [dict setValue:user.password forKey:@"password"];
+    [[BaseRequest sharedInstance] request:kLoginUrl parameters:dict success:^(id responseObject) {
+        NSLog(@"会员信息%@",responseObject);
+        if ([responseObject[@"statu"] isEqualToString:@"true"]&&responseObject[@"result"]) {
+            if (responseObject[@"result"]==nil)
+            {
+                return ;
+            }
+            NSString*passWord=user.password;
+            NSMutableDictionary*dic=responseObject[@"result"];
+            NSMutableDictionary*infoDic=[NSMutableDictionary dictionaryWithDictionary:dic];
+            [infoDic setObject:passWord forKey:@"password"];
+            [self writeToCachePath:infoDic];
+            NSString *cachePath = [HomeDirectory stringByAppendingString:kUserInfoPath];
+            NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:cachePath];
+            user = [ZMUser userWithDict:dict];
+            //[self requestRegUserAndWsxxByRegUserId:user.userId];
+            [self loadData];
+            [self loadUserData];
+            
+            
+        } else {
+            
+            [self loadData];
+            [self loadUserData];
+        }
+    } failure:^(NSError *error) {
+       
+        [self loadData];
+        [self loadUserData];
+        //[SVProgressHUD showErrorWithStatus:[NSString stringWithFormat:@"%@", [error localizedDescription]]];
+    }];
+
+}
+//数据写入缓存
+- (void)writeToCachePath:(id)cacheData {
+    NSString *path = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    [cacheData writeToFile:path atomically:YES];
+}
+- (void)setFeedbackViewController:(UIViewController *)controller shouldPush:(BOOL)shouldPush
+{
+    [[UMFeedback sharedInstance] setFeedbackViewController:nil shouldPush:YES];
+}
+- (void)initNav
+{
+    UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithTitle:@"" style:UIBarButtonItemStylePlain target:nil action:nil];
+    self.navigationItem.backBarButtonItem = item;
+    self.navigationController.navigationBar.barTintColor = RGBCOLOR(245, 50, 109);;
+    self.navigationController.navigationBar.tintColor = [UIColor whiteColor];
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName:[UIColor whiteColor]};
+    self.navigationItem.title = @"个人中心";
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"mine_setting"] style:UIBarButtonItemStylePlain target:self action:@selector(pushSettingController)];
+}
+
+- (void)initTable
+{     //创建表
+    _tableView = [[MineCenterTableView alloc]initWithFrame:CGRectMake(0, 0, self.view.width, self.view.height - self.navigationController.navigationBar.bottom - self.tabBarController.tabBar.height) style:UITableViewStyleGrouped];
+    _tableView.mineCenterCellDelegate = self;
+    [self.view addSubview:_tableView];
+}
+
+- (void)_initHeaderView
+{
+    _backView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, APP_SCREEN_WIDTH, 195)];
+    _backView.backgroundColor = [UIColor whiteColor];
+    _tableView.tableHeaderView = _backView;
+    
+    UIImageView *image = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, APP_SCREEN_WIDTH, 85)];
+    image.layer.masksToBounds = YES;
+    image.contentMode = UIViewContentModeScaleAspectFill;
+    image.userInteractionEnabled = YES;
+    [_backView addSubview:image];
+    
+    _loginButton = [[UIButton alloc]initWithFrame:CGRectMake((image.width - 61 ) / 2 - 50, (image.height - 32 ) / 2, 61, 32)];
+    [_loginButton setImage:[UIImage imageNamed:@"mine_login"] forState:UIControlStateNormal];
+    _loginButton.tag = 11;
+    [image addSubview:_loginButton];
+    [_loginButton addTarget:self action:@selector(clickLoginOrRegistButton:) forControlEvents:UIControlEventTouchUpInside];
+    
+    _registButton = [[UIButton alloc]initWithFrame:CGRectMake((image.width - 61 ) / 2 + 50, (image.height - 32 ) / 2, 61, 32)];
+    [_registButton setImage:[UIImage imageNamed:@"mine_regist"] forState:UIControlStateNormal];
+    _registButton.tag = 12;
+    [image addSubview:_registButton];
+    [_registButton addTarget:self action:@selector(clickLoginOrRegistButton:) forControlEvents:UIControlEventTouchUpInside];
+    
+    UIView *bottomLine = [[UIView alloc] initWithFrame:CGRectMake(0, 85, _backView.width, 10)];
+    bottomLine.backgroundColor = RGBCOLOR(239, 239, 244);
+    [_backView addSubview:bottomLine];
+    //[self loadUserData];
+    UILabel *titleLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, image.bottom + 10, APP_SCREEN_WIDTH, 45)];
+    titleLabel.text = @"      我的订单";
+    titleLabel.font = [UIFont systemFontOfSize:15];
+    [_backView addSubview:titleLabel];
+    
+    CALayer *lineLayer = [[CALayer alloc]init];
+    lineLayer.frame = CGRectMake(15, image.bottom + 13 + 12, 2, 15);
+    lineLayer.backgroundColor = BaseTintRGB.CGColor;
+    [_backView.layer addSublayer:lineLayer];
+    
+    CALayer *labelLayer = [[CALayer alloc]init];
+    labelLayer.frame = CGRectMake(0, titleLabel.bottom, APP_SCREEN_WIDTH, 1);
+    labelLayer.backgroundColor = RGBCOLOR(216, 216, 216).CGColor;
+    [_backView.layer addSublayer:labelLayer];
+    
+    NSArray *titleArry = @[@"待支付",@"待收货",@"全部订单"];
+    CGFloat x = 0;
+    CGFloat width = APP_SCREEN_WIDTH / 3;
+    for (int i = 0; i < titleArry.count; i++) {
+        UIView *backIcon = [[UIView alloc]initWithFrame:CGRectMake(x, titleLabel.bottom, width, _backView.height - image.height - titleLabel.height)];
+        backIcon.userInteractionEnabled = YES;
+        backIcon.tag = 40001 + i;
+        UITapGestureRecognizer *tap  = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(backIconClicked:)];
+        [backIcon addGestureRecognizer:tap];
+        [_backView addSubview:backIcon];
+        if (i < (titleArry.count -1)) {
+            CALayer *layer = [[CALayer alloc] init];
+            layer.frame = CGRectMake(backIcon.width - 1, 0, 1, backIcon.height - 10);
+            layer.backgroundColor = RGBCOLOR(216, 216, 216).CGColor;
+            [backIcon.layer addSublayer:layer];
+        }
+        
+        UIImageView *icon = [[UIImageView alloc]initWithFrame:CGRectMake((backIcon.width - 16) / 2, 11, 16, 16)];
+        icon.contentMode = UIViewContentModeScaleAspectFit;
+        icon.image = [UIImage imageNamed:[NSString stringWithFormat:@"mine_%d",i]];
+        [backIcon addSubview:icon];
+        
+        UILabel *label = [[UILabel alloc]initWithFrame:CGRectMake(0, icon.bottom + 5, backIcon.width, 13)];
+        label.font = [UIFont systemFontOfSize:13];
+        label.textAlignment = NSTextAlignmentCenter;
+        label.text = titleArry[i];
+        [backIcon addSubview:label];
+        if (i == 0) {// 待支付订单计数
+            labelPayOrderCount = [[UILabel alloc] initWithFrame:CGRectMake(icon.right - 5, icon.top, 12, 12)];
+            labelPayOrderCount.backgroundColor= RGBCOLOR(245, 50, 109);
+            labelPayOrderCount.adjustsFontSizeToFitWidth = YES;
+            labelPayOrderCount.font = [UIFont systemFontOfSize:12];
+            labelPayOrderCount.textColor = [UIColor whiteColor];
+            labelPayOrderCount.layer.cornerRadius = 6;
+            labelPayOrderCount.layer.masksToBounds = YES;
+            labelPayOrderCount.textAlignment = NSTextAlignmentCenter;
+            labelPayOrderCount.tag = backIcon.tag;
+            labelPayOrderCount.hidden = YES;
+            [backIcon addSubview:labelPayOrderCount];
+        }
+        
+        x += width;
+        
+    }
+    
+}
+
+- (void)initMineInfoCell
+{
+    _infoCellBack = [[UIView alloc]initWithFrame:CGRectMake(0, 0, APP_SCREEN_WIDTH, 85)];
+    _infoCellBack.hidden = YES;
+    _infoCellBack.userInteractionEnabled = YES;
+    _infoCellBack.backgroundColor = [UIColor whiteColor];
+    [_backView addSubview:_infoCellBack];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(pushMineInfo)];
+    [_infoCellBack addGestureRecognizer:tap];
+    
+    head = [[UIImageView alloc]initWithFrame:CGRectMake( 25, (_infoCellBack.height - 62) / 2, 62, 62)];
+    head.image = [UIImage imageNamed:@"default_icon"];
+    [_infoCellBack addSubview:head];
+    
+    nameLabel = [[UILabel alloc]initWithFrame:CGRectMake(head.right + 14, 20, 100, 15)];
+    nameLabel.text = user.nickName;
+    nameLabel.font = [UIFont systemFontOfSize:15];
+    nameLabel.textColor = [UIColor blackColor];
+    [_infoCellBack addSubview:nameLabel];
+    identityLab = [[UILabel alloc]initWithFrame:CGRectMake(nameLabel.right + 5, 20, 70, 15)];
+    //identityLab.text = @"Dandelion'";
+    identityLab.font = [UIFont systemFontOfSize:15];
+    identityLab.textColor = RGBCOLOR(245, 50, 109);
+    [_infoCellBack addSubview:identityLab];
+    identityImage=[[UIImageView alloc]initWithFrame:CGRectMake(head.right + 10, 18, 80, 18)];
+    [_infoCellBack addSubview:identityImage];
+    redLab=[[UILabel alloc]initWithFrame:CGRectMake(head.right+11, 20, 1, 15)];
+    redLab.backgroundColor=RGBCOLOR(245, 50, 109);
+    redLab.hidden=YES;
+
+    [_infoCellBack addSubview:redLab];
+    labelInvitationCode = [[UILabel alloc] initWithFrame:CGRectMake(head.right + 14, head.bottom - 28, 150, 13)];
+    labelInvitationCode.font = [UIFont systemFontOfSize:12];
+    //labelInvitationCode.hidden = NO;
+    labelInvitationCode.textColor = [UIColor blackColor];
+    [_infoCellBack addSubview:labelInvitationCode];
+    
+    UIImageView *right = [[UIImageView alloc]initWithFrame:CGRectMake(APP_SCREEN_WIDTH - 18 - 20, (_infoCellBack.height - 18) / 2, 18, 25)];
+    right.image = [UIImage imageNamed:@"mine_rightGray"];
+    right.contentMode = UIViewContentModeRight;
+    [_infoCellBack addSubview:right];
+    
+    UIView *bottomLine = [[UIView alloc] initWithFrame:CGRectMake(0, head.bottom + 12, _infoCellBack.width, 10)];
+    bottomLine.backgroundColor = RGBCOLOR(239, 239, 244);
+    [_infoCellBack addSubview:bottomLine];
+}
+
+- (void)clickLoginOrRegistButton:(UIButton *)sender
+{
+    if (sender.tag == 11) {// 登陆
+        LoginViewController *viewController = [[LoginViewController alloc]init];
+        viewController.hidesBottomBarWhenPushed = YES;
+        [self.navigationController pushViewController:viewController animated:YES];
+    }
+    if (sender.tag == 12) { // 注册
+        RegistViewController *viewController = [[RegistViewController alloc]init];
+        viewController.hidesBottomBarWhenPushed = YES;
+        [self.navigationController pushViewController:viewController animated:YES];
+    }
+    
+}
+
+- (void)pushMineInfo
+{
+    ZMUserInfoViewController *userInfoVC = [[ZMUserInfoViewController alloc] init];
+    userInfoVC.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:userInfoVC animated:YES];
+}
+
+- (void)pushSettingController
+{
+    SettingTableViewController *viewController = [[SettingTableViewController alloc]init];
+    viewController.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:viewController animated:YES];
+}
+
+// 订单详情行，按钮点击事件
+- (void) backIconClicked:(UITapGestureRecognizer *)tap{
+    if ([user.userId isEmpty] || user.userId == NULL) {
+        LoginViewController *loginVC = [[LoginViewController alloc] init];
+        [self.navigationController pushViewController:loginVC animated:YES];
+        return;
+    }
+    UIViewController *vc;
+    switch (tap.view.tag) {
+        case 40003:// 全部订单
+            vc = [[ZMOrderViewController alloc] init];
+            break;
+        case 40001:// 待付款
+            vc = [[ZMToBePaidViewController alloc] init];
+            break;
+        case 40002:// 已发货
+            vc = [[ZMShipedOrderViewController alloc] init];
+            break;
+        case 40004:// 退款中
+            vc = [[ZMRetOrderListViewController alloc] init];
+            break;
+            
+        default:
+            break;
+    }
+    vc.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+
+
+- (void)viewDidAppear:(BOOL)animated
+{
+    
+    //    NSLog(@"viewDidAppear");
+//    [self loadData];
+//    [self loadUserData];
+    
+}
+-(void)loadUserData
+{
+    
+    if (!user.userId) {
+        // 未登录
+        _loginButton.hidden = NO;
+        _registButton.hidden = NO;
+        _infoCellBack.hidden = YES;
+    } else {
+        // 已登录
+        _loginButton.hidden = YES;
+        _registButton.hidden = YES;
+        _infoCellBack.hidden = NO;
+        if (![user.headPic isEqualToString:@""]) {
+            [head sd_setImageWithURL:[NSURL URLWithString:user.headPic] placeholderImage:[UIImage imageNamed:@"default_icon"]];
+        }
+        nameLabel.text = user.nickName;
+        CGFloat labelPriceW= [[NSString stringWithFormat:@"￥%@", user.nickName] commonStringWidthForFont:15];
+        nameLabel.font=[UIFont systemFontOfSize:15];
+        nameLabel.frame=CGRectMake(head.right + 14, 20, labelPriceW, 15);
+        if ([user.invitationCode isEmpty]||user.invitationCode==NULL)
+        {
+            labelInvitationCode.hidden=YES;
+        }
+        else
+        {
+            labelInvitationCode.hidden=NO;
+            labelInvitationCode.text=[NSString stringWithFormat:@"%@%@", @"分享码:",user.invitationCode] ;
+  
+        }
+        
+        nameLabel.text=user.nickName;
+        identityLab.frame=CGRectMake(nameLabel.right , 20, 70, 15);
+        redLab.frame=CGRectMake(nameLabel.right-2 , 20, 1, 15);
+        identityImage.frame=CGRectMake(nameLabel.right-15 , 18, 80, 18);
+        if ([user.identity intValue]==2)
+        {
+            redLab.hidden=YES;
+            identityImage.hidden=NO;
+            identityLab.hidden=YES;
+            if ([user.sjwsInvitCode isEmpty]||user.sjwsInvitCode ==NULL)
+            {
+                //identityLab.text=@"顶级芽客";
+                 identityImage.image=[UIImage imageNamed:@"identity1"];
+            }
+            else
+            {
+                if ([user.grade integerValue]==0)
+                {
+                    //identityLab.text=@"芽客";
+                    identityImage.image=[UIImage imageNamed:@"identity1"];
+                    //identityImage.image=[UIImage imageNamed:@"hehuoren"];
+                }
+                else
+                {
+                    identityImage.image=[UIImage imageNamed:@"hehuoren2"]; 
+                }
+  
+            }
+            
+            
+            
+        }
+        else
+        {
+            if ([user.isShoped integerValue] ==1)
+            {
+                redLab.hidden=NO;
+                identityImage.hidden=YES;
+                identityLab.hidden=NO;
+                identityLab.text=@"申请中";
+                identityLab.textColor=RGBCOLOR(245, 50, 109);
+            }else if ([user.isShoped integerValue] ==0)
+            {
+                redLab.hidden=NO;
+                identityImage.hidden=YES;
+                identityLab.hidden=NO;
+                identityLab.text=@"申请开店";
+                identityLab.textColor=RGBCOLOR(245, 50, 109);
+            }
+        }
+    }
+    
+}
+
+
+- (void)viewDidDisappear:(BOOL)animated{
+    //    NSLog(@"viewDidDisappear");
+}
+
+- (void)dealloc{
+    //    NSLog(@"dealloc");
+}
+
+/**
+ *  查询可使用的优惠券张数
+ *
+ *  @param userId 会员ID
+ */
+- (void) requestNumOfCouponByUserId:(NSString *)userId{
+    if (userId==nil)
+    {
+        return;
+    }
+    NSString *url = @"app/crm/coupon/findUsefulCouponNumByRegUserId.do";
+    NSMutableDictionary *params = [NSMutableDictionary dictionary];
+    [params setValue:userId forKey:@"regUserId"];
+    
+    [[BaseRequest sharedInstance] request:url parameters:params success:^(id responseObject) {
+        // NSLog(@"requestNumOfCouponByUserId:%@", responseObject[@"result"]);
+        if ([responseObject[@"statu"] isEqualToString:@"true"]&&responseObject[@"result"]) {
+            NSInteger couponNum = [responseObject[@"result"][@"couponNum"] integerValue];
+            _tableView.couponNum=couponNum;
+            [_tableView reloadData];
+        }
+    } failure:^(NSError *error) {
+        //        NSLog(@"requestNumOfCouponByUserId error: %@", [error localizedDescription]);
+    }];
+}
+
+- (void)mineCenterTableView:(MineCenterTableView *)mineCenterTableView didSelectedAtIndex:(NSIndexPath *)indexPath{
+    
+    LoginViewController *loginVC;
+    if ([user.userId isEmpty] || user.userId == NULL) {
+        loginVC = [[LoginViewController alloc] init];
+        [self.navigationController pushViewController:loginVC animated:YES];
+        return;
+    }
+    switch (indexPath.section) {
+        case 0:
+            
+            //我的收藏
+            if (indexPath.row==0)
+            {
+                ZMcollectShopViewController*collectShop=[[ZMcollectShopViewController alloc]init];
+                collectShop.hidesBottomBarWhenPushed=YES;
+                [self.navigationController pushViewController:collectShop animated:YES];
+          
+            }
+            if (indexPath.row == 1) {// 我的现金券
+                //                if (_tableView.couponNum <= 0) {
+                //                    [SVProgressHUD showInfoWithStatus:@"无可使用的现金券"];
+                //                } else {
+                //                    [SVProgressHUD showInfoWithStatus:[NSString stringWithFormat:@"有%ld张现金券可用",_tableView.couponNum]];
+                //                }
+                CouponItemListViewController*couponVC=[[CouponItemListViewController alloc]init];
+                [self.navigationController pushViewController:couponVC animated:YES];
+            } else if (indexPath.row == 2){// 收货地址
+                ZMAddressViewController *addressVC = [[ZMAddressViewController alloc] init];
+                addressVC.hidesBottomBarWhenPushed = YES;
+                [self.navigationController pushViewController:addressVC animated:YES];
+            }
+            break;
+        case 1:
+            if (indexPath.row == 0) {// 用户反馈
+                
+                [self presentModalViewController:[UMFeedback feedbackModalViewController]
+                                        animated:YES];
+            } else
+                if (indexPath.row == 1){// 客服电话
+                    [self autoCallByPhoneNum:servicePhoneNum];
+                }
+            if (indexPath.row==2)//好友邀请
+            {
+                [self share];
+            }
+            break;
+            
+        default:
+            break;
+    }
+}
+-(void)share
+{
+    
+        if (user.invitationCode)
+        {
+            str=[NSString stringWithFormat:@"下载客户端立送10元红包，推荐朋友注册可返佣金。赶紧加入挣钱！分享码%@",user.invitationCode];
+        }
+        else
+        {
+            str=[NSString stringWithFormat:@"下载客户端立送10元红包，推荐朋友注册可返佣金。赶紧加入挣钱！"];
+        }
+    
+    NSString*picture=@"http://7xkcnp.com2.z0.glb.qiniucdn.com/saleAct151229194528.png";
+    
+    [[UMSocialData defaultData].urlResource setResourceType:UMSocialUrlResourceTypeImage url:picture];
+        [UMSocialSnsService presentSnsIconSheetView:self
+                                             appKey:UMAPPKEY
+                                          shareText:str
+                                         shareImage:nil
+                                    shareToSnsNames:@[UMShareToWechatSession,UMShareToWechatTimeline]
+                                           delegate:nil];
+        //NSString*url=@"http://m.weiyar.com/webapp/invitation.jsp?invateCode=";
+        
+        NSString*urlstr=[NSString stringWithFormat:@"http://m.weiyar.com/webapp/invitation.jsp?inviteCode=%@",user.invitationCode];
+        
+        [UMSocialData defaultData].extConfig.wechatSessionData.url = urlstr;
+        [UMSocialData defaultData].extConfig.wechatTimelineData.url = urlstr;
+        [UMSocialData defaultData].extConfig.wxMessageType = UMSocialWXMessageTypeWeb;
+        
+    }
+    
+
+
+
+
+/**
+ *  拨打电话
+ *
+ *  @param phoneNum 电话号码
+ */
+- (void) autoCallByPhoneNum:(NSString *) phoneNum{
+    if (phoneNum == nil || phoneNum == NULL || phoneNum.length <= 0) {// 电话号码为空
+        return;
+    }
+    //这种方法，拨打完电话回不到原来的应用，会停留在通讯录里，而且是直接拨打，不弹出提示
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"温馨提示" message:@"是否拨打" delegate:self cancelButtonTitle:@"是" otherButtonTitles:@"否", nil];
+    [alert show];
+    alert.tag=11;
+    alert.delegate = self;
+    numberStr=phoneNum;
+    
+}
+-(void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (alertView.tag==11)
+    {
+        if (buttonIndex==0)
+        {
+            NSMutableString * str1=[[NSMutableString alloc] initWithFormat:@"tel:%@",numberStr];
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:str1]];
+        }
+    }
+}
+/**
+ *  根据类型查找客户端参数
+ *
+ *  @param type type=类型（1.客服参数，2.退货参数，3.支付宝_移动支付参数）
+ */
+- (void) requestAppPropListByType:(NSString *)type{
+    NSString *url = @"app/sys/appProp/findAppPropListByType.do";
+    
+    NSMutableDictionary *params = [[NSMutableDictionary alloc] init];
+    [params setValue:type forKey:@"type"];
+    
+    [[BaseRequest sharedInstance] request:url parameters:params success:^(id responseObject) {
+        //        NSLog(@"App Property List By Type: %@", responseObject);
+        if ([responseObject[@"statu"] isEqualToString:@"true"]&&responseObject[@"result"]) {
+            if ([type isEqualToString:@"1"]) {
+                servicePhoneNum = responseObject[@"result"][@"phone"];
+                _tableView.phoneNum = servicePhoneNum;
+            }
+            [_tableView reloadData];
+        }
+    } failure:^(NSError *error) {
+        //        NSLog(@"error: %@", [error localizedDescription]);
+    }];
+}
+
+/**
+>>>>>>> .r1282
+ *  请求待支付订单个数,会员查询自己有几个待支付订单
+ *
+ *  @param regUserId 会员ID
+ */
+- (void) requestPayOrderByRegUserId:(NSString *)regUserId{
+    NSString *url = @"app/order/order/countPaying.do";
+    if (regUserId==nil)
+    {
+        return;
+    }
+    NSMutableDictionary *params = [[NSMutableDictionary alloc] init];
+    [params setValue:regUserId forKey:@"regUserId"];
+    
+    [[BaseRequest sharedInstance] request:url parameters:params success:^(id responseObject) {
+        if ([responseObject[@"statu"] isEqualToString:@"true"]&&responseObject[@"result"]) {
+            _toBePayOrderCount = [responseObject[@"result"][@"count"] integerValue];
+            if (_toBePayOrderCount > 0) {
+                labelPayOrderCount.text = [NSString stringWithFormat:@"%ld", (long)_toBePayOrderCount];
+                labelPayOrderCount.hidden = NO;
+            } else {
+                labelPayOrderCount.hidden = YES;
+            }
+        }else{
+            [SVProgressHUD showInfoWithStatus:@"加载失败"];
+        }
+    } failure:^(NSError *error) {
+        //        NSLog(@"error: %@", [error localizedDescription]);
+    }];
+}
+
+
+@end

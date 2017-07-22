@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>3AE6358B-6590-4728-B683-687F008E981B</string>
+	<key>IDESourceControlProjectName</key>
+	<string>WY4iPhone</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>1A4A968F311FCE248050E0CE7F70842BA037500D</key>
+		<string>https://bitbucket.org/longwind/wy4iphone.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>WY4iPhone/WY4iPhone.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>1A4A968F311FCE248050E0CE7F70842BA037500D</key>
+		<string>../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://bitbucket.org/longwind/wy4iphone.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>1A4A968F311FCE248050E0CE7F70842BA037500D</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>1A4A968F311FCE248050E0CE7F70842BA037500D</string>
+			<key>IDESourceControlWCCName</key>
+			<string>wy4iphone</string>
+		</dict>
+	</array>
+</dict>
+</plist>

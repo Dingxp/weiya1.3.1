@@ -1,0 +1,441 @@
+//
+//  ApplyMoneyViewController.m
+//  WY4iPhone
+//
+//  Created by 丁旭朋 on 15/12/28.
+//  Copyright © 2015年 mx. All rights reserved.
+//
+
+#import "ApplyMoneyViewController.h"
+#import "BaseRequest.h"
+#import "UIImageView+WebCache.h"
+#import "ZMUser.h"
+#import "WXApi.h"
+#import "WXApiObject.h"
+#import <AlipaySDK/AlipaySDK.h>
+#import "UserFailViewController.h"
+#import "UserSuccessViewController.h"
+@interface ApplyMoneyViewController ()
+{
+    NSDictionary*applyDic;
+    NSString*payType;
+    UIButton*paybtn;
+    NSString*orderId;
+    ZMUser*user;
+    UILabel*tipsEmpty;
+}
+@end
+
+@implementation ApplyMoneyViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithTitle:@"" style:UIBarButtonItemStylePlain target:nil action:nil];
+    self.navigationItem.backBarButtonItem = item;
+    self.navigationController.navigationBar.barTintColor = RGBCOLOR(245, 50, 109);;
+    self.navigationController.navigationBar.tintColor = [UIColor whiteColor];
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName:[UIColor whiteColor]};
+    self.navigationItem.title = @"付款";
+    self.view.backgroundColor=[UIColor whiteColor];
+    payType=@"1";
+    NSString *cachePath1 = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    NSMutableDictionary *userDic = [[NSMutableDictionary alloc] initWithContentsOfFile:cachePath1];
+    user=[ZMUser userWithDict:userDic];
+    tipsEmpty = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.width, self.view.height /2)];
+    tipsEmpty.textAlignment = NSTextAlignmentCenter;
+    tipsEmpty.text = @"没有此活动!";
+    tipsEmpty.textColor = RGBCOLOR(102, 102, 102);
+    tipsEmpty.hidden=YES;
+    [self.view addSubview:tipsEmpty];
+    [self requestApply];
+}
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [MobClick beginLogPageView:@"PageOne"];
+    
+    
+    
+}
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [MobClick endLogPageView:@"PageOne"];
+    [SVProgressHUD dismiss];
+}
+-(void)initView
+{
+    UIImageView*imageView=[[UIImageView alloc]initWithFrame:CGRectMake(15, 15, 80, 80)];
+    NSString*str=applyDic[@"httpImgUrl"];
+    
+    [imageView sd_setImageWithURL:[NSURL URLWithString:str]];
+    [self.view addSubview:imageView];
+    UILabel*nameLab=[[UILabel alloc]initWithFrame:CGRectMake(imageView.right+10, 15, 100, 80)];
+    nameLab.text=applyDic[@"proName"];
+    nameLab.numberOfLines=0;
+    [self.view addSubview:nameLab];
+    UILabel*moneLab=[[UILabel alloc]initWithFrame:CGRectMake(APP_SCREEN_WIDTH-55, 15, 40, 80)];
+    moneLab.text=[NSString stringWithFormat:@"￥%@",applyDic[@"currentPrice"]];
+    moneLab.textColor=RGBCOLOR(255, 0, 96);
+    [self.view addSubview:moneLab];
+    [self paytype:imageView];
+    
+}
+-(void)paytype:(UIImageView*)imageView
+{
+    UILabel*payTypeLab=[[UILabel alloc]initWithFrame:CGRectMake(0, imageView.bottom+20, APP_SCREEN_WIDTH, 44)];
+    payTypeLab.backgroundColor=RGBCOLOR(240, 240, 240);
+    payTypeLab.text=@"  支付方式";
+    [self.view addSubview:payTypeLab];
+    UIView*view=[[UIView alloc]initWithFrame:CGRectMake(0, payTypeLab.bottom, APP_SCREEN_WIDTH, 62)];
+    [self.view addSubview:view];
+    UIView*line=[[UIView alloc]initWithFrame:CGRectMake(0, 0, APP_SCREEN_WIDTH, 1)];
+    line.backgroundColor=RGBCOLOR(232, 232, 232);
+    view.tag=10;
+    view.userInteractionEnabled=YES;
+    view.backgroundColor=[UIColor whiteColor];
+    [view addSubview:line];
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(touchImage:)];
+    [view addGestureRecognizer:tap];
+    //支付选择按钮
+    _baoImage=[[UIImageView alloc]initWithFrame:CGRectMake(10, 20, 20, 20)];
+    _baoImage.layer.cornerRadius=10;
+    _baoImage.layer.masksToBounds = YES;
+    _baoImage.image=[UIImage imageNamed:@"hookRing"];
+    [view addSubview:_baoImage];
+    //支付宝logo
+    UIImageView*logoImage=[[UIImageView alloc]initWithFrame:CGRectMake(_baoImage.right+10, 10, 40, 40)];
+    logoImage.image=[UIImage imageNamed:@"zhifubao"];
+    [view addSubview:logoImage];
+    UILabel*titleLab=[[UILabel alloc]initWithFrame:CGRectMake(logoImage.right+5, 0, 200, 30)];
+    titleLab.text=@"支付宝支付";
+    titleLab.font=[UIFont systemFontOfSize:14];
+    [view addSubview:titleLab];
+    UILabel*contentLab=[[UILabel alloc]initWithFrame:CGRectMake(logoImage.right+5, 30, 200, 30)];
+    contentLab.text=@"推荐支付宝用户使用";
+    contentLab.font=[UIFont systemFontOfSize:13];
+    contentLab.textColor=[UIColor grayColor];
+    [view addSubview:contentLab];
+    UIView*line1=[[UIView alloc]initWithFrame:CGRectMake(0, 61, APP_SCREEN_WIDTH, 1)];
+    line1.backgroundColor=RGBCOLOR(232, 232, 232);
+    [view addSubview:line1];
+    UIView*view2=[[UIView alloc]initWithFrame:CGRectMake(0, view.bottom, APP_SCREEN_WIDTH, 61)];
+    [self.view addSubview:view2];
+    //微信按钮
+    _weiImage=[[UIImageView alloc]initWithFrame:CGRectMake(10, 20, 20, 20)];
+    _weiImage.layer.cornerRadius=10;
+    _weiImage.layer.masksToBounds = YES;
+    _weiImage.image=[UIImage imageNamed:@"emptyRing"];
+    [view2 addSubview:_weiImage];
+    //微信logo
+    UIImageView*logoImage1=[[UIImageView alloc]initWithFrame:CGRectMake(_baoImage.right+10, 10, 40, 40)];
+    logoImage1.image=[UIImage imageNamed:@"weixin"];
+    [view2 addSubview:logoImage1];
+    UILabel*titleLab1=[[UILabel alloc]initWithFrame:CGRectMake(logoImage.right+5, 0, 200, 30)];
+    titleLab1.text=@"微信支付";
+    titleLab1.font=[UIFont systemFontOfSize:14];
+    [view2 addSubview:titleLab1];
+    UILabel*contentLab1=[[UILabel alloc]initWithFrame:CGRectMake(logoImage.right+5, 30, 200, 30)];
+    contentLab1.text=@"推荐微信用户使用";
+    contentLab1.font=[UIFont systemFontOfSize:13];
+    contentLab1.textColor=[UIColor grayColor];
+    [view2 addSubview:contentLab1];
+    UIView*line2=[[UIView alloc]initWithFrame:CGRectMake(0, 60, APP_SCREEN_WIDTH, 1)];
+    line2.backgroundColor=RGBCOLOR(232, 232, 232);
+    [view2 addSubview:line2];
+    view2.tag=11;
+    view2.userInteractionEnabled=YES;
+    view2.backgroundColor=[UIColor whiteColor];
+    
+    UITapGestureRecognizer *tap1 = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(touchImage:)];
+    [view2 addGestureRecognizer:tap1];
+    paybtn=[UIButton new];
+    paybtn.frame=CGRectMake(10, view2.bottom+50, APP_SCREEN_WIDTH-20, 44);
+    paybtn.layer.borderColor = [UIColor redColor].CGColor;
+    paybtn.layer.borderWidth = 1;
+    paybtn.layer.cornerRadius=5;
+    
+    [paybtn setTitle:@"立即支付" forState:UIControlStateNormal];
+    [paybtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    paybtn.backgroundColor=RGBCOLOR(245, 50, 109);
+    [paybtn addTarget:self action:@selector(togoPay) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:paybtn];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(getOrderPayResult:) name:@"paymoney2" object:nil];
+    
+    
+}
+// 微信回调  通知绑定方法，进行判断
+- (void)getOrderPayResult:(NSNotification *)notification{
+    if ([notification.object isEqualToString:@"success"])
+    {
+        //如果成功，进入成功页面
+        [self paySuccess];
+        
+    }
+    else
+    {
+        //失败，进入失败页面
+        [self payFail];
+    }
+}
+
+-(void)togoPay
+{
+    if ([user.isShoped integerValue]==1)
+    {
+        [SVProgressHUD showSuccessWithStatus:@"已经支付过了"];
+        return;
+    }
+    [self doPayOrderAction];
+}
+- (void) doPayOrderAction {
+    paybtn.userInteractionEnabled=NO;
+    paybtn.backgroundColor=RGBCOLOR(240, 240, 240);
+    paybtn.layer.borderColor = RGBCOLOR(240, 240, 240).CGColor;
+    NSString *url;
+    
+    
+    //定义请求地址
+    url = @"app/order/order/insertOrder.do";
+    
+    //定义请求参数
+    NSMutableDictionary*params=[NSMutableDictionary new];
+    [params setValue:user.userId forKey:@"regUserId"];                          //用户id
+    [params setValue:user.telNo forKey:@"regUserTel"];                          //用户手机号码
+    //地址id
+    [params setValue:@"0" forKey:@"regUserTel"];
+    [params setValue:applyDic[@"currentPrice"] forKey:@"amount"];       //订单总金额
+    
+    //优惠券id
+    [params setValue:@"0" forKey:@"couponItemId"];
+    
+    [params setValue:payType forKey:@"payType"];   //支付类型
+    [params setValue:@"0" forKey:@"shipAmount"];//邮费
+    
+    //商品明细
+    NSMutableArray *pros = [NSMutableArray array];
+    
+    NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+    [dict setValue:applyDic[@"proId"] forKey:@"proId"];
+    [dict setValue:@"1" forKey:@"quantity"];
+    [dict setValue:applyDic[@"currentPrice"] forKey:@"price"];
+    [pros addObject:dict];
+    
+    [params setValue:pros forKey:@"items"];
+    
+    
+    
+    [[BaseRequest sharedInstance] orderRequest:url parameters:params success:^(id responseObject) {
+        NSLog(@"++++==%@",responseObject);
+        if ([responseObject[@"statu"] isEqualToString:@"true"]&&responseObject[@"result"]) {
+            if (responseObject[@"result"]==nil) {
+                [SVProgressHUD showInfoWithStatus:@"支付失败"];
+                return;
+            }
+            if ([payType integerValue]==1) {           //支付宝支付
+                [self doAlipay:responseObject];
+            }else if([payType integerValue]==2){       //微信支付
+                [self doWXpay:responseObject];
+            }
+        }else{
+            paybtn.userInteractionEnabled=YES;
+            paybtn.backgroundColor=RGBCOLOR(245, 50, 109);
+            NSString*tipStr=@"支付失败";
+            if (responseObject[@"result"]) {
+                tipStr = responseObject[@"result"];
+            }
+            [SVProgressHUD showInfoWithStatus:tipStr];
+        }
+        
+    } failure:^(NSError *error) {
+        //        NSLog(@"error: %@", [error localizedDescription]);
+    }];
+    
+}
+/**
+ * 调用支付宝支付接口
+ */
+- (void) doAlipay:(id)responseObject {
+    orderId=responseObject[@"orderId"];
+    [self payByAliWithPayOrder:responseObject[@"result"] fromScheme:kScheme];
+    paybtn.userInteractionEnabled=YES;
+    paybtn.backgroundColor=RGBCOLOR(245, 50, 109);
+    
+}
+
+/**
+ * 调用微信支付接口
+ */
+-(void)doWXpay:(id)responseObject
+{
+    orderId=responseObject[@"result"][@"orderId"];
+    //判断是否安装微信，如果安装微信则调用微信支付否则提示用户去安装微信
+    if([WXApi isWXAppInstalled])
+        
+    {
+        
+        PayReq *request = [[PayReq alloc] init] ;
+        if (responseObject[@"result"][@"partnerid"]) {
+            request.partnerId = responseObject[@"result"][@"partnerid"];
+        }
+        else{
+            [SVProgressHUD showInfoWithStatus:@"支付失败"];
+            return;
+        }
+        if (responseObject[@"result"][@"prepayid"]) {
+            request.prepayId= responseObject[@"result"][@"prepayid"];
+            
+        }else{
+            [SVProgressHUD showInfoWithStatus:@"支付失败"];
+            return;
+        }
+        if (responseObject[@"result"][@"noncestr"]) {
+            request.nonceStr= responseObject[@"result"][@"noncestr"];
+            
+        }else{
+            [SVProgressHUD showInfoWithStatus:@"支付失败"];
+            return;
+        }
+        if (responseObject[@"result"][@"timestamp"]) {
+            request.timeStamp= [responseObject[@"result"][@"timestamp"] intValue];
+            
+        }else{
+            [SVProgressHUD showInfoWithStatus:@"支付失败"];
+            return;
+        }
+        if (responseObject[@"result"][@"sign"])
+        {
+            request.sign= responseObject[@"result"][@"sign"];
+            
+        }else{
+            [SVProgressHUD showInfoWithStatus:@"支付失败"];
+            return;
+        }
+        request.package = @"Sign=WXPay";
+        [WXApi sendReq:request];
+        paybtn.userInteractionEnabled=YES;
+        paybtn.backgroundColor=RGBCOLOR(245, 50, 109);
+    }
+    else
+    {
+        [SVProgressHUD showInfoWithStatus:@"请安装微信"];
+        paybtn.userInteractionEnabled=YES;
+        paybtn.backgroundColor=RGBCOLOR(245, 50, 109);
+    }
+}
+/**
+ *  通过支付宝支付
+ *
+ *  @param payOrder <#payOrder description#>
+ *  @param scheme   <#scheme description#>
+ */
+- (void) payByAliWithPayOrder:(NSString *)payOrder fromScheme:(NSString *)appScheme{
+    [[AlipaySDK defaultService] payOrder:payOrder fromScheme:appScheme callback:^(NSDictionary *resultDic) {
+        //【callback 处理支付结果】
+        if ([resultDic[@"resultStatus"] isEqualToString:@"9000"]) {
+            //            NSLog(@"支付成功:%@", resultDic);
+            [self paySuccess];
+        } else if([resultDic[@"resultStatus"] isEqualToString:@"6001"]){
+            //            NSLog(@"支付失败,手动取消:%@", resultDic);
+            paybtn.userInteractionEnabled=YES;
+            paybtn.backgroundColor=RGBCOLOR(245, 50, 109);
+            [self payFail];
+        }
+    }];
+}
+-(void)payFail
+{
+    UserFailViewController*failedVC=[UserFailViewController new];
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+    [self.navigationController pushViewController:failedVC animated:YES];
+}
+-(void)paySuccess
+{
+    NSString *cachePath1 = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    NSMutableDictionary *userDic = [[NSMutableDictionary alloc] initWithContentsOfFile:cachePath1];
+    [userDic setValue:@"1" forKey:@"isShoped"];
+    [self writeToCachePath:userDic];
+    // 成功
+    UserSuccessViewController*successVC=[UserSuccessViewController new];
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+    [self.navigationController pushViewController:successVC animated:YES];
+}
+
+//数据写入缓存
+- (void)writeToCachePath:(id)cacheData {
+    NSString *path = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    [cacheData writeToFile:path atomically:YES];
+}
+
+-(void)touchImage:(UITapGestureRecognizer*)tap
+{    //选择支付宝
+    if (tap.view.tag==10) {
+        payType=@"1";
+        _baoImage.image=[UIImage imageNamed:@"hookRing"];
+        _weiImage.image=[UIImage imageNamed:@"emptyRing"];
+        
+    }
+    //选择微信
+    else if (tap.view.tag==11)
+    {
+        payType=@"2";
+        _baoImage.image=[UIImage imageNamed:@"emptyRing"];
+        _weiImage.image=[UIImage imageNamed:@"hookRing"];
+    }
+}
+
+-(void)requestApply
+{    NSString *url = @"app/crm/saleact/findWsPackagePro.do";
+    NSMutableDictionary *params = [NSMutableDictionary dictionary];
+    [SVProgressHUD showWithStatus:@"加载中"];
+    [[BaseRequest sharedInstance] request:url parameters:params success:^(id responseObject) {
+        [SVProgressHUD dismiss];
+        NSLog(@"---%@",responseObject);
+        //_arraySpceialProDict=responseObject[@"result"];
+        if ([responseObject[@"statu"] isEqualToString:@"true"]&&responseObject[@"result"]) {
+            
+            if (responseObject[@"result"]==nil) {
+                [SVProgressHUD showErrorWithStatus:@"系统异常，操作失败"];
+                return ;
+            }
+            if ( [responseObject[@"result"] isKindOfClass:[NSDictionary class]])
+            {
+                applyDic=responseObject[@"result"];
+                [self initView];
+            }
+            else
+            {
+                tipsEmpty.hidden=NO;
+                return;
+            }
+            
+            
+        }
+        else
+        {
+            //[SVProgressHUD showWithStatus:@"加载中"];
+            [SVProgressHUD showInfoWithStatus:responseObject[@"result"]];
+        }
+    } failure:^(NSError *error) {
+        //        NSLog(@"requestNumOfCouponByUserId error: %@", [error localizedDescription]);
+        //[SVProgressHUD showWithStatus:@"加载中"];
+    }];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+ #pragma mark - Navigation
+ 
+ // In a storyboard-based application, you will often want to do a little preparation before navigation
+ - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+ // Get the new view controller using [segue destinationViewController].
+ // Pass the selected object to the new view controller.
+ }
+ */
+
+@end

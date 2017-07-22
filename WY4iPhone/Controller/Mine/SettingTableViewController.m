@@ -1,0 +1,153 @@
+//
+//  SettingTableViewController.m
+//  WY4iPhone
+//
+//  Created by 旭朋  丁 on 15/9/12.
+//  Copyright (c) 2015年 mx. All rights reserved.
+//
+
+#import "SettingTableViewController.h"
+#import "ZMUser.h"
+#import "ForgotPasswordViewController2.h"
+
+@interface SettingTableViewController ()
+{
+    ZMUser*user;
+    UIButton *confirmButton;
+}
+@end
+
+@implementation SettingTableViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, APP_SCREEN_WIDTH, APP_SCREEN_HEIGHT) style:UITableViewStyleGrouped];
+    self.navigationItem.title = @"设置";
+    self.view.backgroundColor = BaseBackViewRGB;
+    self.navigationController.navigationBar.translucent = NO;
+    
+    if ([self.tableView respondsToSelector:@selector(setSeparatorInset:)]) {
+        [self.tableView setSeparatorInset:UIEdgeInsetsZero];
+    }
+    
+    if ([self.tableView respondsToSelector:@selector(setLayoutMargins:)]) {
+        [self.tableView setLayoutMargins:UIEdgeInsetsZero];
+    }
+    
+    UIView *backView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, APP_SCREEN_WIDTH, 69)];
+    confirmButton = [[UIButton alloc] initWithFrame:CGRectMake(24, backView.height - 54, APP_SCREEN_WIDTH - 48, 54)];
+    confirmButton.backgroundColor = BaseTintRGB;
+    confirmButton.layer.cornerRadius = 5;
+    [confirmButton setTitle:@"退出当前账户" forState:UIControlStateNormal];
+    [backView addSubview:confirmButton];
+    [confirmButton addTarget:self action:@selector(confirmButtonClick) forControlEvents:UIControlEventTouchUpInside];
+    self.tableView.tableFooterView = backView;
+    NSString *cachePath1 = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    NSMutableDictionary *userDic = [[NSMutableDictionary alloc] initWithContentsOfFile:cachePath1];
+    user=[ZMUser userWithDict:userDic];
+}
+-(void)viewWillAppear:(BOOL)animated
+{
+    if (!user.userId)
+    {
+        [self.tableView reloadData];
+        confirmButton.hidden=YES;
+    }
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - Table view data source
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 10;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 10;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 55;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    if (!user.userId)
+    {
+        return 1;
+    }
+    else
+    {
+        return 2;
+  
+    }
+    
+    }
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    static NSString *systemidentify = @"systemCell";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:systemidentify];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:systemidentify];
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        // 置顶Cell的分割线
+        if ([cell respondsToSelector:@selector(setSeparatorInset:)]) {
+            [cell setSeparatorInset:UIEdgeInsetsZero];
+        }
+        
+        if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+            [cell setLayoutMargins:UIEdgeInsetsZero];
+        }
+    }
+    cell.textLabel.font = [UIFont systemFontOfSize:15];
+    cell.detailTextLabel.font = [UIFont systemFontOfSize:15];
+    if (indexPath.row == 0) {
+        cell.textLabel.text = @"当前版本";
+        cell.detailTextLabel.text = @"V1.3.1";
+        cell.detailTextLabel.textColor = [UIColor blackColor];
+    }
+    if (indexPath.row == 1) {
+        cell.textLabel.text = @"修改密码";
+    }
+    return cell;
+}
+
+- (void) tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.row == 0) {// 检查更新
+        
+    } else if(indexPath.row == 1){// 修改密码
+        if (user.userId) {
+            ForgotPasswordViewController2 *forgotPwdVC = [[ForgotPasswordViewController2 alloc] init];
+            [self.navigationController pushViewController:forgotPwdVC animated:YES];
+        }else{
+            [SVProgressHUD showInfoWithStatus:@"请先登录"];
+        }
+    }
+}
+
+/**
+ *  退出当前帐号
+ */
+- (void)confirmButtonClick{
+    [self deleteUserInfoFile:kUserInfoPath];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+/**
+ *  删除用户个人信息的文件
+ */
+- (void) deleteUserInfoFile:(NSString *) fileName{
+    NSString *cachePath = [HomeDirectory stringByAppendingString:kUserInfoPath];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    [fileManager removeItemAtPath:cachePath error:nil];        //友盟成功退出登录
+        [MobClick profileSignOff];
+   
+    
+    
+    //ZMUser*user=[[ZMUser userInstance] refreshUserInfo];
+}
+
+
+@end

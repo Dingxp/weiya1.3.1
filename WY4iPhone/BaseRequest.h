@@ -1,0 +1,54 @@
+//
+//  BaseRequset.h
+//  PinChaoPhone
+//
+//  Created by 旭朋  丁 on 15/8/27.
+//  Copyright (c) 2015年 LSY. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "AFNetworking.h"
+#import "SDWebImage/UIImageView+WebCache.h"
+
+ //#define kBaseUrl    @"http://121.40.143.138:8080/mobile/"
+#define kBaseUrl    @"http://m.weiyar.com/"
+//#define kBaseUrl    @"http://192.168.0.121:8080/mobile/"
+//#define kBaseUrl    @"121.40.143.138:8080/mobile"
+//#define kBaseUrl    @"http://192.168.1.101:8000/mobile/"
+//#define kBaseUrl    @"http://192.168.1.102:8080/mobile/"
+//#define kBaseUrl    @"http://192.168.1.104:8080/mobile/"
+@interface BaseRequest : NSObject
+
+/**
+ *  单例模式
+ *
+ *  @return 返回BaseRequest实例
+ */
++ (instancetype)sharedInstance;
+
+/**
+ *  Post请求
+ *
+ *  @return 返回BaseRequest实例
+ */
+- (void)request:(NSString *)url parameters:(NSDictionary *)parameters success:(void (^)(id responseObject))success failure:(void (^)(NSError *error))failure;
+
+/**
+ *  Get请求
+ *
+ *  @return 返回BaseRequest实例
+ */
+
+- (void)requestByGET:(NSString *)uri parameters:(NSDictionary *)parameters success:(void (^)(id responseObject))success failure:(void (^)(NSError *error))failure;
+
+/**
+ *  订单请求
+ *
+ *  @param url        <#url description#>
+ *  @param parameters <#parameters description#>
+ *  @param success    <#success description#>
+ *  @param failure    <#failure description#>
+ */
+- (void) orderRequest:(NSString *)url parameters:(NSDictionary *)parameters success:(void (^)(id responseObject))success failure:(void (^)(NSError *error))failure;
+
+@end

@@ -1,0 +1,25 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "7faab231-bbeb-874a-b7e7-c5bfdde1d8e4++9898",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "7faab231-bbeb-874a-b7e7-c5bfdde1d8e4++9898" : {
+
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "7faab231-bbeb-874a-b7e7-c5bfdde1d8e4++9898" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "3AE6358B-6590-4728-B683-687F008E981B",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "7faab231-bbeb-874a-b7e7-c5bfdde1d8e4++9898" : "weiya_1\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "WY4iPhone",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "WY4iPhone.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/192.168.1.100\/svn\/ishishang",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "7faab231-bbeb-874a-b7e7-c5bfdde1d8e4++9898"
+    }
+  ]
+}
